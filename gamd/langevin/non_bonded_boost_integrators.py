@@ -29,8 +29,6 @@ class NonBondedBoostIntegrator(GroupBoostIntegrator, ABC):
         :param temperature:         "Bath" temperature value compatible with units.kelvin, default: 298.15*unit.kelvin
         :param restart_filename:    The file name of the restart file.  (default=None indicates new simulation.)
         """
-        # self.__group = group
-        # group_name = BoostType.NonBonded
         group_dict = {group: "NonBonded"}
 
         super(NonBondedBoostIntegrator, self).__init__(group_dict,
@@ -38,8 +36,7 @@ class NonBondedBoostIntegrator(GroupBoostIntegrator, ABC):
                                                       BoostMethod.GROUPS,
                                                       dt, ntcmdprep, ntcmd,
                                                       ntebprep, nteb, nstlim,
-                                                      ntave, 0, sigma0,
-                                                      collision_rate,
+                                                      ntave, collision_rate,
                                                       temperature,
                                                       restart_filename)
 
