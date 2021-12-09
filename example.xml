@@ -1,60 +1,71 @@
 <?xml version="1.0" ?>
 <gamd>
-    <temperature>298.15</temperature> <!-- units.kelvin -->
+    <temperature>298.15</temperature> <!-- unit.kelvin -->
 
     <system>
         <nonbonded-method>PME</nonbonded-method>
-        <nonbonded-cutoff>0.8</nonbonded-cutoff> <!-- units.picoseconds -->
+        <nonbonded-cutoff>1.0</nonbonded-cutoff> <!-- unit.nanometers -->
         <constraints>HBonds</constraints>
     </system>
 
     <barostat>
-        <pressure>1.0</pressure>
+        <pressure>1.0</pressure> <!-- unit.bar -->
         <frequency>25</frequency>
     </barostat>
+    
     <run-minimization>True</run-minimization>
 
     <integrator>
         <algorithm>langevin</algorithm>
         <boost-type>lower-dual</boost-type>
         <sigma0>
-            <primary>6.0</primary>
-            <secondary>6.0</secondary>
+            <primary>6.0</primary> <!-- unit.kilocalories_per_mole -->
+            <secondary>6.0</secondary> <!-- unit.kilocalories_per_mole -->
         </sigma0>
         <random-seed>0</random-seed>
-        <dt>0.002</dt> <!-- units.picoseconds -->
-        <friction-coefficient>1.0</friction-coefficient> <!-- units.picoseconds**-1 -->
-        <number-of-steps>
+        <dt>0.002</dt> <!-- unit.picoseconds -->
+        <friction-coefficient>1.0</friction-coefficient> <!-- unit.picoseconds**-1 -->
+        <!--number-of-steps>
             <conventional-md-prep>200000</conventional-md-prep>
             <conventional-md>1000000</conventional-md>
             <gamd-equilibration-prep>600000</gamd-equilibration-prep>
             <gamd-equilibration>3000000</gamd-equilibration>
             <gamd-production>14200000</gamd-production>
             <total-simulation-length>19000000</total-simulation-length>
+            <averaging-window-interval>500</averaging-window-interval>
+        </number-of-steps-->
+        <number-of-steps> <!-- quick test -->
+            <conventional-md-prep>2000</conventional-md-prep>
+            <conventional-md>10000</conventional-md>
+            <gamd-equilibration-prep>2000</gamd-equilibration-prep>
+            <gamd-equilibration>20000</gamd-equilibration>
+            <gamd-production>30000</gamd-production>
+            <total-simulation-length>60000</total-simulation-length>
+            <averaging-window-interval>50</averaging-window-interval>
         </number-of-steps>
     </integrator>
 
-
     <input-files>
         <amber>
-            <topology>dip.top</topology>
-            <coordinates type="rst7">md-4ns.rst7</coordinates>
+            <topology>data/dip.top</topology>
+            <coordinates type="rst7">data/md-4ns.rst7</coordinates>
             <!-- <coordinates type="pdb">md-4ns.rst7</coordinates> -->
         </amber>
         <charmm>
-                <topology>input.psf</topology>
-                <coordinates>input.pdb</coordinates>
-                <parameters>
-                    <file>charm22.prm</file>
-                    <file>charm22.rtf</file>
-                </parameters>
+            <topology>input.psf</topology>
+            <coordinates>input.pdb</coordinates>
+            <parameters>
+                <file>charm22.prm</file>
+                <file>charm22.rtf</file>
+            </parameters>
         </charmm>
         <gromacs>
             <topology>input.top</topology>
             <coordinates>input.gro</coordinates>
+            <include-dir>/usr/local/gromacs/share/gromacs/top</include-dir>
         </gromacs>
         <forcefield>
-            <pdb>input.pdb</pdb>
+            <coordinates>input.pdb</coordinates>
             <forcefields>
                 <native>
                     <file>amber99sb.xml</file>
