@@ -8,6 +8,7 @@ GaMD simulation.
 """
 import os
 
+import mdtraj
 import parmed
 import openmm as openmm
 import openmm.app as openmm_app
@@ -27,7 +28,10 @@ from gamd.integrator_factory import *
 
 
 def load_pdb_positions_and_box_vectors(pdb_coords_filename, need_box):
-    positions = openmm_app.PDBFile(pdb_coords_filename)
+    try:
+        positions = openmm_app.PDBxFile(pdb_coords_filename) # More consistency with large systems
+    except:
+        positions = openmm_app.PDBFile(pdb_coords_filename)
     pdb_parmed = parmed.load_file(pdb_coords_filename)
     if need_box:
         assert pdb_parmed.box_vectors is not None, "No box vectors "\
@@ -313,7 +317,8 @@ class GamdSimulationFactory:
 
         elif config.outputs.reporting.coordinates_file_type == "pdb":
             gamdSimulation.traj_reporter = openmm_app.PDBReporter
-
+        elif config.outputs.reporting.coordinates_file_type == "h5":
+            gamdSimulation.traj_reporter = mdtraj.reporters.HDF5Reporter
         else:
             raise Exception("Reporter type not found: {}".format(
                             config.outputs.reporting.coordinates_file_type))
