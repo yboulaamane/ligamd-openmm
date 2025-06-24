@@ -12,6 +12,7 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 from abc import ABCMeta, ABC
 from abc import abstractmethod
+from types import SimpleNamespace
 
 import openmm.unit as unit
 
@@ -388,16 +389,27 @@ class XmlParser(Parser):
                     if input_files_tag.tag == "amber":
                         assert not input_file_provided, "Only one input set "\
                             "allowed. Cannot provide more than one <amber>, "\
-                            "<charmm>, <gromacs>, or <forcefield> tag."
+                            "<charmm>, <gromacs>, <openmm>, or <forcefield> tag."
                         
                         self.config.input_files.amber = parse_amber_tag(
                             input_files_tag)
                         input_file_provided = True
-                        
+                    
+                    elif input_files_tag.tag == "openmm":
+                        assert not input_file_provided, "Only one input set " \
+                            "allowed. Cannot provide more than one <amber>, " \
+                            "<charmm>, <gromacs>, <openmm>, or <forcefield> tag."
+
+                        self.config.input_files.openmm = SimpleNamespace()
+                        self.config.input_files.openmm.system = input_files_tag.findtext("system")
+                        self.config.input_files.openmm.state = input_files_tag.findtext("state")
+                        self.config.input_files.openmm.topology = input_files_tag.findtext("topology")
+                        input_file_provided = True
+
                     elif input_files_tag.tag == "charmm":
                         assert not input_file_provided, "Only one input set "\
                             "allowed. Cannot provide more than one <amber>, "\
-                            "<charmm>, <gromacs>, or <forcefield> tag."
+                            "<charmm>, <gromacs>, <openmm>, or <forcefield> tag."
                         self.config.input_files.charmm = parse_charmm_tag(
                             input_files_tag)
                         input_file_provided = True
@@ -405,7 +417,7 @@ class XmlParser(Parser):
                     elif input_files_tag.tag == "gromacs":
                         assert not input_file_provided, "Only one input set "\
                             "allowed. Cannot provide more than one <amber>, "\
-                            "<charmm>, <gromacs>, or <forcefield> tag."
+                            "<charmm>, <gromacs>, <openmm>, or <forcefield> tag."
                         self.config.input_files.gromacs = parse_gromacs_tag(
                             input_files_tag)
                         input_file_provided = True
@@ -413,7 +425,7 @@ class XmlParser(Parser):
                     elif input_files_tag.tag == "forcefield":
                         assert not input_file_provided, "Only one input set "\
                             "allowed. Cannot provide more than one <amber>, "\
-                            "<charmm>, <gromacs>, or <forcefield> tag."
+                            "<charmm>, <gromacs>, <openmm>, or <forcefield> tag."
                         self.config.input_files.forcefield = parse_forcefield_tag(
                             input_files_tag)
                         input_file_provided = True
