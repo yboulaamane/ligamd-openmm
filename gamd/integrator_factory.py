@@ -195,7 +195,9 @@ class GamdIntegratorFactory:
     @staticmethod
     def get_integrator(boost_type_str, system, temperature, dt, ntcmdprep, ntcmd, ntebprep, nteb, nstlim, ntave,
                        sigma0p=6.0 * unit.kilocalories_per_mole, sigma0d=6.0 * unit.kilocalories_per_mole):
-        set_all_forces_to_group(system, 0)
+        # Reset force groups ONLY for non-ligand GaMD modes
+        if boost_type_str != "ligand":
+            set_all_forces_to_group(system, 0)
         result = []
         first_boost_type = BoostType.TOTAL
         second_boost_type = BoostType.DIHEDRAL
@@ -238,6 +240,28 @@ class GamdIntegratorFactory:
             result = create_upper_dual_non_bonded_dihederal_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd,
                                                                              ntebprep, nteb, nstlim, ntave, sigma0p,
                                                                              sigma0d)
+        elif boost_type_str == "ligand":
+            # Ligand-only GaMD:
+            # - force group 1 is already assigned in GamdSimulationFactory
+            # - we simply reuse the nonbonded-style integrator logic
+            ligand_group = 1
+        
+            integrator = NonBondedLowerBoundIntegrator(
+                ligand_group,
+                dt=dt,
+                ntcmdprep=ntcmdprep,
+                ntcmd=ntcmd,
+                ntebprep=ntebprep,
+                nteb=nteb,
+                nstlim=nstlim,
+                ntave=ntave,
+                sigma0=sigma0p,
+                temperature=temperature
+            )
+        
+            result = ["", ligand_group, integrator]
+            second_boost_type = BoostType.NON_BONDED
+
             first_boost_type = BoostType.NON_BONDED
             second_boost_type = BoostType.DIHEDRAL
         else:
