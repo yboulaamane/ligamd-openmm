@@ -228,37 +228,41 @@ class GamdSimulationFactory:
         else:
             raise Exception("No valid input files found. OpenMM simulation "\
                             "not made.")
-
         # ------------------------------------------------------------
         # LiGaMD: assign ligand forces to force group 1
         # ------------------------------------------------------------
         if config.integrator.boost_type == "ligand":
-
-            # CHANGE THIS to your ligand residue name(s)
-            ligand_resnames = ["LIG"]
-
+        
+            ligand_resnames = getattr(
+                config.integrator,
+                "ligand_resnames",
+                None
+            )
+        
+            if ligand_resnames is None:
+                raise RuntimeError(
+                    "boost_type='ligand' requires <ligand_resnames> in the integrator block"
+                )
+        
             ligand_atoms = set()
             for atom in gamdSimulation.topology.atoms():
                 if atom.residue.name in ligand_resnames:
                     ligand_atoms.add(atom.index)
-
+        
             if len(ligand_atoms) == 0:
                 raise RuntimeError(
                     f"No ligand atoms found for residue names: {ligand_resnames}"
                 )
-
+        
             LIGAND_GROUP = 1
             DEFAULT_GROUP = 0
-
+        
             for force in gamdSimulation.system.getForces():
-
-                # Put all nonbonded terms in ligand group
-                # (simple + robust for unbinding)
                 if isinstance(force, openmm.NonbondedForce):
                     force.setForceGroup(LIGAND_GROUP)
-
                 else:
                     force.setForceGroup(DEFAULT_GROUP)
+
 
         if config.integrator.algorithm == "langevin":
             boost_type_str = config.integrator.boost_type
