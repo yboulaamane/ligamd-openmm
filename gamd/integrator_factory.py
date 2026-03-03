@@ -4,7 +4,6 @@ integrator_factory.py: Implements the GaMD integration method.
 Portions copyright (c) 2021 University of Kansas
 Authors: Matthew Copeland, Yinglong Miao
 Contributors: Lane Votapka
-
 """
 
 import openmm.unit as unit
@@ -21,6 +20,13 @@ from gamd.langevin.non_bonded_boost_integrators import LowerBoundIntegrator as N
 from gamd.langevin.non_bonded_boost_integrators import UpperBoundIntegrator as NonBondedUpperBoundIntegrator
 from gamd.langevin.total_boost_integrators import LowerBoundIntegrator as TotalBoostLowerBoundIntegrator
 from gamd.langevin.total_boost_integrators import UpperBoundIntegrator as TotalBoostUpperBoundIntegrator
+
+# --- NEW LiGaMD IMPORTS ---
+from gamd.langevin.ligand_boost_integrators import LowerBoundLigandIntegrator
+from gamd.langevin.ligand_boost_integrators import LowerBoundDualLigandIntegrator
+from gamd.langevin.ligand_boost_integrators import LowerBoundLigandIntegrator, LowerBoundDualLigandIntegrator, UpperBoundLigandIntegrator, UpperBoundDualLigandIntegrator
+# --------------------------
+
 from gamd.stage_integrator import BoostType
 
 
@@ -33,7 +39,6 @@ def print_force_group_information(system):
 def set_all_forces_to_group(system, group):
     for force in system.getForces():
         force.setForceGroup(group)
-
 
 
 def set_dihedral_group(system):
@@ -51,16 +56,7 @@ def set_single_group(group, name_list, system):
     return group
 
 
-
 def create_gamd_cmd_integrator(system, temperature, dt, ntcmdprep, ntcmd, ntebprep, nteb, nstlim, ntave):
-    """
-        This integrator is meant for use in generating a conventional MD baseline to compare against
-        for the other integrators.
-
-    :param system:
-    :param temperature:
-    :return:
-    """
     group = set_dihedral_group(system)
     integrator = DihedralBoostLowerBoundIntegrator(group, dt=dt, ntcmdprep=ntcmdprep, ntcmd=ntcmd,
                                                    ntebprep=ntebprep, nteb=nteb, nstlim=nstlim,
@@ -72,8 +68,6 @@ def create_gamd_cmd_integrator(system, temperature, dt, ntcmdprep, ntcmd, ntebpr
 
 def create_lower_total_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd, ntebprep, nteb, nstlim, ntave,
                                         sigma0=6.0 * unit.kilocalories_per_mole):
-    # The group is set, so that we can output the dihedral energy.  It doesn't impact calculations for total boost,
-    # since we are utilizing the OpenMM provided variables with them not split out for total boost calculations.
     group = set_dihedral_group(system)
     integrator = TotalBoostLowerBoundIntegrator(dt=dt, ntcmdprep=ntcmdprep, ntcmd=ntcmd,
                                                 ntebprep=ntebprep, nteb=nteb, nstlim=nstlim,
@@ -84,8 +78,6 @@ def create_lower_total_boost_integrator(system, temperature, dt, ntcmdprep, ntcm
 
 def create_upper_total_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd, ntebprep, nteb, nstlim, ntave,
                                         sigma0=6.0 * unit.kilocalories_per_mole):
-    # The group is set, so that we can output the dihedral energy.  It doesn't impact calculations for total boost,
-    # since we are utilizing the OpenMM provided variables with them not split out for total boost calculations.
     group = set_dihedral_group(system)
     integrator = TotalBoostUpperBoundIntegrator(dt=dt, ntcmdprep=ntcmdprep, ntcmd=ntcmd,
                                                 ntebprep=ntebprep, nteb=nteb, nstlim=nstlim,
@@ -187,6 +179,45 @@ def create_upper_dual_non_bonded_dihederal_boost_integrator(system, temperature,
     return result
 
 
+# --- NEW FACTORY FUNCTIONS FOR LiGaMD ---
+def create_lower_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd, ntebprep, nteb, nstlim, ntave, sigma0):
+    # System already prepared by gamdSimulation to have Ligand in Group 1
+    # We do NOT reset force groups here because gamdSimulation.py handled the splitting.
+    integrator = LowerBoundLigandIntegrator(dt=dt, ntcmdprep=ntcmdprep, ntcmd=ntcmd, ntebprep=ntebprep,
+                                            nteb=nteb, nstlim=nstlim, ntave=ntave, sigma0=sigma0,
+                                            temperature=temperature)
+    # The boost is on Group 1 (Ligand)
+    result = [1, "", integrator] 
+    return result
+
+def create_lower_dual_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd, ntebprep, nteb, nstlim, ntave, sigma0p, sigma0d):
+    
+    # NEW LINE: Isolate Protein Dihedrals into Force Group 2
+    set_dihedral_group(system)
+    
+    integrator = LowerBoundDualLigandIntegrator(dt=dt, ntcmdprep=ntcmdprep, ntcmd=ntcmd, ntebprep=ntebprep,
+                                                nteb=nteb, nstlim=nstlim, ntave=ntave, sigma0p=sigma0p, sigma0d=sigma0d,
+                                                temperature=temperature)
+    # Return Group 1 (Ligand) and Group 2 (Dihedral)
+    result = [1, 2, integrator]
+    return result
+    
+def create_upper_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd, ntebprep, nteb, nstlim, ntave, sigma0p):
+    integrator = UpperBoundLigandIntegrator(dt=dt, ntcmdprep=ntcmdprep, ntcmd=ntcmd, ntebprep=ntebprep,
+                                            nteb=nteb, nstlim=nstlim, ntave=ntave, sigma0=sigma0p,
+                                            temperature=temperature)
+    return [1, integrator]
+
+def create_upper_dual_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd, ntebprep, nteb, nstlim, ntave, sigma0p, sigma0d):
+    # Isolate Protein Dihedrals into Force Group 2 safely
+    set_dihedral_group(system)
+    integrator = UpperBoundDualLigandIntegrator(dt=dt, ntcmdprep=ntcmdprep, ntcmd=ntcmd, ntebprep=ntebprep,
+                                                nteb=nteb, nstlim=nstlim, ntave=ntave, sigma0p=sigma0p, sigma0d=sigma0d,
+                                                temperature=temperature)
+    return [1, 2, integrator]
+# ----------------------------------------
+
+
 class GamdIntegratorFactory:
 
     def __init__(self):
@@ -195,12 +226,17 @@ class GamdIntegratorFactory:
     @staticmethod
     def get_integrator(boost_type_str, system, temperature, dt, ntcmdprep, ntcmd, ntebprep, nteb, nstlim, ntave,
                        sigma0p=6.0 * unit.kilocalories_per_mole, sigma0d=6.0 * unit.kilocalories_per_mole):
-        # Reset force groups ONLY for non-ligand GaMD modes
-        if boost_type_str != "ligand":
+        
+        # --- IMPORTANT: Do NOT reset force groups if using LiGaMD ---
+        # gamdSimulation.py has carefully split the system into Group 1 (Ligand) and Group 0 (Env).
+        # We only reset to 0 if it is a standard simulation.
+        if "ligand" not in boost_type_str and "ligamd" not in boost_type_str:
             set_all_forces_to_group(system, 0)
+        
         result = []
         first_boost_type = BoostType.TOTAL
         second_boost_type = BoostType.DIHEDRAL
+        
         if boost_type_str == "gamd-cmd-base":
             result = create_gamd_cmd_integrator(system, temperature, dt, ntcmdprep, ntcmd, ntebprep, nteb, nstlim,
                                                 ntave)
@@ -240,30 +276,36 @@ class GamdIntegratorFactory:
             result = create_upper_dual_non_bonded_dihederal_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd,
                                                                              ntebprep, nteb, nstlim, ntave, sigma0p,
                                                                              sigma0d)
-        elif boost_type_str == "ligand":
-            # Ligand-only GaMD:
-            # - force group 1 is already assigned in GamdSimulationFactory
-            # - we simply reuse the nonbonded-style integrator logic
-            ligand_group = 1
-        
-            integrator = NonBondedLowerBoundIntegrator(
-                ligand_group,
-                dt=dt,
-                ntcmdprep=ntcmdprep,
-                ntcmd=ntcmd,
-                ntebprep=ntebprep,
-                nteb=nteb,
-                nstlim=nstlim,
-                ntave=ntave,
-                sigma0=sigma0p,
-                temperature=temperature
-            )
-        
-            result = ["", ligand_group, integrator]
-            second_boost_type = BoostType.NON_BONDED
-
             first_boost_type = BoostType.NON_BONDED
             second_boost_type = BoostType.DIHEDRAL
+
+        # --- NEW LOGIC FOR LIGAMD ---
+        elif boost_type_str in ["ligamd", "lower-ligand"]:
+            result = create_lower_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd,
+                                                          ntebprep, nteb, nstlim, ntave, sigma0p)
+            first_boost_type = BoostType.NON_BONDED # Repurposed as "Ligand"
+            second_boost_type = BoostType.TOTAL # Unused placeholder
+
+        elif boost_type_str in ["ligamd-dual", "lower-dual-ligand"]:
+             result = create_lower_dual_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd,
+                                                                ntebprep, nteb, nstlim, ntave, sigma0p, sigma0d)
+             first_boost_type = BoostType.NON_BONDED # Ligand
+             second_boost_type = BoostType.DIHEDRAL  # Protein
+             
+         # --- UPPER BOUND LIGAMD ---
+        elif boost_type_str in ["upper-ligamd"]:
+            result = create_upper_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd,
+                                                          ntebprep, nteb, nstlim, ntave, sigma0p)
+            first_boost_type = BoostType.NON_BONDED 
+            second_boost_type = BoostType.TOTAL 
+
+        elif boost_type_str in ["upper-ligamd-dual"]:
+             result = create_upper_dual_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd,
+                                                                ntebprep, nteb, nstlim, ntave, sigma0p, sigma0d)
+             first_boost_type = BoostType.NON_BONDED 
+             second_boost_type = BoostType.DIHEDRAL  
+        # ----------------------------
+
         else:
             raise ValueError("Invalid boost_type_str passed to GamdIntegratorFactory.getIntegrator.")
 
