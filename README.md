@@ -44,7 +44,7 @@ Follow instructions in the **OpenMM User Guide – Section 2.2 Installing OpenMM
 ### 3. Install AmberTools (for post-MD analysis)
 
 ```bash
-conda install -c conda-forge ambertools**
+conda install -c conda-forge ambertools
 
 ## 4. Install PyReweighting
 
