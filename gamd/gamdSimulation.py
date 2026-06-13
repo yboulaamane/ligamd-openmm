@@ -22,7 +22,7 @@ def load_pdb_positions_and_box_vectors(pdb_coords_filename, need_box):
     return positions, pdb_parmed.box_vectors
 
 
-def separate_ligand_interactions(system, positions, topology, timask1):
+def separate_ligand_interactions(system, topology, timask1):
     """
     Separates the nonbonded interactions of the ligand (defined by timask1) 
     into a separate Force Group (Group 1) using a CustomNonbondedForce.
@@ -237,9 +237,8 @@ class GamdSimulationFactory:
                 raise Exception("LiGaMD Error: 'timask1' must be defined in the XML integrator section.")
             
             gamdSimulation.system = separate_ligand_interactions(
-                gamdSimulation.system, 
-                gamdSimulation.positions, 
-                gamdSimulation.topology, 
+                gamdSimulation.system,
+                gamdSimulation.topology,
                 config.integrator.timask1
             )
 

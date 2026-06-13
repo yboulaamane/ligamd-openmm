@@ -292,13 +292,13 @@ class GamdIntegratorFactory:
             first_boost_type = BoostType.NON_BONDED  # Ligand
             second_boost_type = BoostType.DIHEDRAL   # Protein
 
-        elif boost_type_str in ["upper-ligamd"]:
+        elif boost_type_str in ["upper-ligamd", "upper-ligand"]:
             result = create_upper_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd,
                                                           ntebprep, nteb, nstlim, ntave, sigma0p)
             first_boost_type = BoostType.NON_BONDED
             second_boost_type = BoostType.TOTAL
 
-        elif boost_type_str in ["upper-ligamd-dual"]:
+        elif boost_type_str in ["upper-ligamd-dual", "upper-dual-ligand"]:
             result = create_upper_dual_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd,
                                                                ntebprep, nteb, nstlim, ntave, sigma0p, sigma0d)
             first_boost_type = BoostType.NON_BONDED
