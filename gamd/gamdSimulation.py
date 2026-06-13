@@ -1,5 +1,3 @@
-# [Overwrite gamd/gamdSimulation.py with this content]
-
 import os
 import mdtraj
 import parmed
