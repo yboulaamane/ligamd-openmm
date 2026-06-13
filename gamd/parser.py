@@ -140,6 +140,8 @@ def parse_integrator_tag(tag):
         elif integrator_tag.tag == "friction-coefficient":
             integrator_config.friction_coefficient = assign_tag(
                 integrator_tag, float, useunit=unit.picoseconds**-1)
+        elif integrator_tag.tag == "timask1":
+            integrator_config.timask1 = assign_tag(integrator_tag, str)
         elif integrator_tag.tag == "number-of-steps":
             for number_steps_tag in integrator_tag:
                 if number_steps_tag.tag == "conventional-md-prep":
