@@ -103,6 +103,7 @@ class IntegratorConfig:
         self.dt = 0.002 * unit.picoseconds
         self.friction_coefficient = 1.0 * unit.picoseconds ** -1
         self.number_of_steps = IntegratorNumberOfStepsConfig()
+        self.timask1 = None
         return
 
     def serialize(self, root):
@@ -115,6 +116,8 @@ class IntegratorConfig:
         assign_tag(root, "friction-coefficient", self.friction_coefficient.value_in_unit(unit.picoseconds**-1))
         xml_number_of_steps_tags = ET.SubElement(root, "number-of-steps")
         self.number_of_steps.serialize(xml_number_of_steps_tags)
+        if self.timask1 is not None:
+            assign_tag(root, "timask1", self.timask1)
         return
 
 
