@@ -20,7 +20,7 @@ def create_output_directories(directories, overwrite_output=False):
         for directory in directories:
             if os.path.exists(directory):
                 print("Deleting old output directory:", directory)
-                os.system('rm -r %s' % directory)
+                shutil.rmtree(directory)
     
     for directory in directories:
         os.makedirs(directory, 0o755)

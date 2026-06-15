@@ -22,9 +22,9 @@ from gamd.langevin.total_boost_integrators import LowerBoundIntegrator as TotalB
 from gamd.langevin.total_boost_integrators import UpperBoundIntegrator as TotalBoostUpperBoundIntegrator
 
 # --- NEW LiGaMD IMPORTS ---
-from gamd.langevin.ligand_boost_integrators import LowerBoundLigandIntegrator
-from gamd.langevin.ligand_boost_integrators import LowerBoundDualLigandIntegrator
-from gamd.langevin.ligand_boost_integrators import LowerBoundLigandIntegrator, LowerBoundDualLigandIntegrator, UpperBoundLigandIntegrator, UpperBoundDualLigandIntegrator
+from gamd.langevin.ligand_boost_integrators import (
+    LowerBoundLigandIntegrator, LowerBoundDualLigandIntegrator,
+    UpperBoundLigandIntegrator, UpperBoundDualLigandIntegrator)
 # --------------------------
 
 from gamd.stage_integrator import BoostType
@@ -206,7 +206,7 @@ def create_upper_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntc
     integrator = UpperBoundLigandIntegrator(dt=dt, ntcmdprep=ntcmdprep, ntcmd=ntcmd, ntebprep=ntebprep,
                                             nteb=nteb, nstlim=nstlim, ntave=ntave, sigma0=sigma0p,
                                             temperature=temperature)
-    return [1, integrator]
+    return [1, "", integrator]
 
 def create_upper_dual_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd, ntebprep, nteb, nstlim, ntave, sigma0p, sigma0d):
     # Isolate Protein Dihedrals into Force Group 2 safely
@@ -287,23 +287,22 @@ class GamdIntegratorFactory:
             second_boost_type = BoostType.TOTAL # Unused placeholder
 
         elif boost_type_str in ["ligamd-dual", "lower-dual-ligand"]:
-             result = create_lower_dual_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd,
-                                                                ntebprep, nteb, nstlim, ntave, sigma0p, sigma0d)
-             first_boost_type = BoostType.NON_BONDED # Ligand
-             second_boost_type = BoostType.DIHEDRAL  # Protein
-             
-         # --- UPPER BOUND LIGAMD ---
-        elif boost_type_str in ["upper-ligamd"]:
+            result = create_lower_dual_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd,
+                                                               ntebprep, nteb, nstlim, ntave, sigma0p, sigma0d)
+            first_boost_type = BoostType.NON_BONDED  # Ligand
+            second_boost_type = BoostType.DIHEDRAL   # Protein
+
+        elif boost_type_str in ["upper-ligamd", "upper-ligand"]:
             result = create_upper_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd,
                                                           ntebprep, nteb, nstlim, ntave, sigma0p)
-            first_boost_type = BoostType.NON_BONDED 
-            second_boost_type = BoostType.TOTAL 
+            first_boost_type = BoostType.NON_BONDED
+            second_boost_type = BoostType.TOTAL
 
-        elif boost_type_str in ["upper-ligamd-dual"]:
-             result = create_upper_dual_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd,
-                                                                ntebprep, nteb, nstlim, ntave, sigma0p, sigma0d)
-             first_boost_type = BoostType.NON_BONDED 
-             second_boost_type = BoostType.DIHEDRAL  
+        elif boost_type_str in ["upper-ligamd-dual", "upper-dual-ligand"]:
+            result = create_upper_dual_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd,
+                                                               ntebprep, nteb, nstlim, ntave, sigma0p, sigma0d)
+            first_boost_type = BoostType.NON_BONDED
+            second_boost_type = BoostType.DIHEDRAL
         # ----------------------------
 
         else:
