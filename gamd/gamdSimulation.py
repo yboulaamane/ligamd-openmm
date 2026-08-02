@@ -252,8 +252,7 @@ class GamdSimulationFactory:
                 config.integrator.number_of_steps.conventional_md,
                 config.integrator.number_of_steps.gamd_equilibration_prep,
                 config.integrator.number_of_steps.gamd_equilibration,
-                config.integrator.number_of_steps.gamd_production, # Fixed attribute name
-                config.integrator.number_of_steps.averaging_window_interval,
+                config.integrator.number_of_steps.total_simulation_length, # nstlim must be total steps (ntcmd + nteb + gamd_production); passing only gamd_production sets stage_5_end too early and silently freezes boost updates for the last ntcmd+nteb steps                config.integrator.number_of_steps.averaging_window_interval,
                 sigma0p=config.integrator.sigma0.primary,
                 sigma0d=config.integrator.sigma0.secondary)
             
