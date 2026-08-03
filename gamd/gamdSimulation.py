@@ -50,9 +50,31 @@ def separate_ligand_interactions(system, topology, timask1):
         raise Exception("LiGaMD Error: System does not have a NonbondedForce.")
 
     # 3. Create CustomNonbondedForce with Lorentz-Berthelot mixing rules
-    energy_expression = """
-        4*epsilon*((sigma/r)^12-(sigma/r)^6) + 138.935456*charge1*charge2/r;
-        sigma=0.5*(sigma1+sigma2); 
+    #
+    # IMPORTANT: CustomNonbondedForce cannot do PME (no reciprocal-space term),
+    # and the ligand's charges are zeroed in the main NonbondedForce below, so
+    # this expression IS the ligand's electrostatics during the simulation --
+    # not a diagnostic. A plain 1/r Coulomb sum here puts the solvated
+    # benzamidine/trypsin system 63.78 kcal/mol away from the same system under
+    # full PME, with the whole error carried by 18 ligand atoms.
+    #
+    # Using the Ewald real-space term erfc(alpha*r)/r, with the alpha the main
+    # PME force is using, reproduces PME's direct-space contribution exactly and
+    # reduces that deviation to 6.68 kcal/mol. The reciprocal-space part is
+    # still absent; closing it would need a second full PME evaluation.
+    pme_alpha, _, _, _ = nb_force.getPMEParameters()
+    alpha_value = pme_alpha.value_in_unit(unit.nanometer**-1)
+    if alpha_value == 0.0:
+        # PME alpha left at "auto" (0): derive it the same way OpenMM does,
+        # from the Ewald error tolerance and cutoff distance.
+        import math
+        tol = nb_force.getEwaldErrorTolerance()
+        cutoff_nm = nb_force.getCutoffDistance().value_in_unit(unit.nanometer)
+        alpha_value = math.sqrt(-math.log(2.0 * tol)) / cutoff_nm
+
+    energy_expression = f"""
+        4*epsilon*((sigma/r)^12-(sigma/r)^6) + 138.935456*charge1*charge2*erfc({alpha_value}*r)/r;
+        sigma=0.5*(sigma1+sigma2);
         epsilon=sqrt(epsilon1*epsilon2);
     """
     
