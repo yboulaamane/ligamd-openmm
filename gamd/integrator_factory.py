@@ -192,13 +192,13 @@ def create_lower_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntc
 
 def create_lower_dual_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd, ntebprep, nteb, nstlim, ntave, sigma0p, sigma0d):
     
-    # NEW LINE: Isolate Protein Dihedrals into Force Group 2
+    # All dihedrals (protein, ligand, anything else) go to Force Group 2
     set_dihedral_group(system)
     
     integrator = LowerBoundDualLigandIntegrator(dt=dt, ntcmdprep=ntcmdprep, ntcmd=ntcmd, ntebprep=ntebprep,
                                                 nteb=nteb, nstlim=nstlim, ntave=ntave, sigma0p=sigma0p, sigma0d=sigma0d,
                                                 temperature=temperature)
-    # Return Group 1 (Ligand) and Group 2 (Dihedral)
+    # Return Group 1 (Ligand) and Group 2 (All dihedrals)
     result = [1, 2, integrator]
     return result
     
@@ -209,7 +209,7 @@ def create_upper_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntc
     return [1, "", integrator]
 
 def create_upper_dual_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd, ntebprep, nteb, nstlim, ntave, sigma0p, sigma0d):
-    # Isolate Protein Dihedrals into Force Group 2 safely
+    # All dihedrals (protein, ligand, anything else) go to Force Group 2
     set_dihedral_group(system)
     integrator = UpperBoundDualLigandIntegrator(dt=dt, ntcmdprep=ntcmdprep, ntcmd=ntcmd, ntebprep=ntebprep,
                                                 nteb=nteb, nstlim=nstlim, ntave=ntave, sigma0p=sigma0p, sigma0d=sigma0d,
@@ -290,7 +290,7 @@ class GamdIntegratorFactory:
             result = create_lower_dual_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd,
                                                                ntebprep, nteb, nstlim, ntave, sigma0p, sigma0d)
             first_boost_type = BoostType.NON_BONDED  # Ligand
-            second_boost_type = BoostType.DIHEDRAL   # Protein
+            second_boost_type = BoostType.DIHEDRAL   # All dihedrals
 
         elif boost_type_str in ["upper-ligamd", "upper-ligand"]:
             result = create_upper_ligand_boost_integrator(system, temperature, dt, ntcmdprep, ntcmd,
