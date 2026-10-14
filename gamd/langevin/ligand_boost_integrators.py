@@ -29,7 +29,7 @@ class DualLigandBoostIntegrator(GroupBoostIntegrator, ABC):
         
         # FIX: Mapping Ligand -> NonBonded and System -> Dihedral
         # This allows us to use the existing "DUAL_NON_BONDED_DIHEDRAL" kernel infrastructure.
-        # "Dihedral" here is just a label for the 2nd boost group (which is actually the whole system).
+        # "Dihedral" labels the 2nd boost group: all torsion forces, in group 2.
         group_dict = {ligand_group: "NonBonded", system_group: "Dihedral"}
         
         super(DualLigandBoostIntegrator, self).__init__(group_dict,
@@ -62,10 +62,10 @@ class LowerBoundDualLigandIntegrator(DualLigandBoostIntegrator):
     def __init__(self, dt=2.0 * unit.femtoseconds, ntcmdprep=200000, ntcmd=1000000, 
                  ntebprep=200000, nteb=1000000, nstlim=3000000, ntave=50000, 
                  sigma0p=6.0 * unit.kilocalories_per_mole, # Ligand
-                 sigma0d=6.0 * unit.kilocalories_per_mole, # System
+                 sigma0d=6.0 * unit.kilocalories_per_mole, # All dihedrals
                  collision_rate=1.0 / unit.picoseconds,
                  temperature=298.15 * unit.kelvin, restart_filename=None):
-        # Group 1 = Ligand (labeled NonBonded), Group 0 = System (labeled Dihedral)
+        # Group 1 = Ligand (labeled NonBonded), Group 2 = All dihedrals (labeled Dihedral)
         super(LowerBoundDualLigandIntegrator, self).__init__(1, 2, dt, ntcmdprep, ntcmd, ntebprep,
                                                              nteb, nstlim, ntave, sigma0p, sigma0d,
                                                              collision_rate, temperature, restart_filename)
@@ -91,10 +91,10 @@ class UpperBoundDualLigandIntegrator(DualLigandBoostIntegrator):
     def __init__(self, dt=2.0 * unit.femtoseconds, ntcmdprep=200000, ntcmd=1000000, 
                  ntebprep=200000, nteb=1000000, nstlim=3000000, ntave=50000, 
                  sigma0p=6.0 * unit.kilocalories_per_mole, # Ligand
-                 sigma0d=6.0 * unit.kilocalories_per_mole, # Protein Dihedrals
+                 sigma0d=6.0 * unit.kilocalories_per_mole, # All dihedrals
                  collision_rate=1.0 / unit.picoseconds,
                  temperature=298.15 * unit.kelvin, restart_filename=None):
-        # Group 1 = Ligand (NonBonded), Group 2 = Protein Dihedrals
+        # Group 1 = Ligand (NonBonded), Group 2 = All dihedrals
         super(UpperBoundDualLigandIntegrator, self).__init__(1, 2, dt, ntcmdprep, ntcmd, ntebprep,
                                                              nteb, nstlim, ntave, sigma0p, sigma0d,
                                                              collision_rate, temperature, restart_filename)
