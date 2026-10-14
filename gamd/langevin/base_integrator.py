@@ -410,13 +410,12 @@ class GroupBoostIntegrator(GamdLangevinIntegrator, ABC):
         # normal good condition, and just want to keep the ForceScalingFactor 
         # the same.
         #
-        #   NOTE:  We do these odd computational gymnastics to counteract the 
-        # problem within OpenMM with if statements causing the JIT compiler to 
-        # take an exponentially larger amount of time to start.
-        #
-        #   1.0 - 1.0 * check_boost + check_boost * ForceScalingFactor"
+        #   NOTE:  select() instead of an if block, because if blocks make
+        # OpenMM's JIT compile time blow up. Arithmetic blending
+        # (1 - check_boost + check_boost*FSF) is not used because FSF is NaN
+        # (0/0) when a group's energy never varies, and 0*NaN is still NaN.
         self.add_compute_global_by_name(
-            "ForceScalingFactor", "1.0 - {0} + {0} * {1}", 
+            "ForceScalingFactor", "select({0}, {1}, 1.0)",
             ["check_boost", "ForceScalingFactor"], compute_type)
         
         #
@@ -665,7 +664,7 @@ class GroupBoostIntegrator(GamdLangevinIntegrator, ABC):
                                         compute_type)
 
         self.add_compute_global_by_name(
-            "threshold_energy", "{0} + ({1} - {0})/{2}", ["Vmin", "Vmax", "k0"],
+            "threshold_energy", "select({2}, {0} + ({1} - {0})/{2}, {1})", ["Vmin", "Vmax", "k0"],
             compute_type)
 
         self.add_compute_global_by_name(
@@ -678,7 +677,7 @@ class GroupBoostIntegrator(GamdLangevinIntegrator, ABC):
                                         BoostType.TOTAL.value) + " >= 0.0")
             self.calculate_common_threshold_energy_and_effective_harmonic_constant(ComputeType.TOTAL)
             self.endBlock()
-            self.add_compute_global_by_name("k", "({0}/({1} - {2}))", ["k0", "Vmax", "Vmin"],
+            self.add_compute_global_by_name("k", "select({1} - {2}, {0}/({1} - {2}), 0)", ["k0", "Vmax", "Vmin"],
                                             ComputeType.TOTAL)
 
         if compute_type == ComputeType.GROUP:
@@ -690,7 +689,7 @@ class GroupBoostIntegrator(GamdLangevinIntegrator, ABC):
                 self.calculate_common_threshold_energy_and_effective_harmonic_constant(ComputeType.GROUP,
                                                                                        group_id)
                 self.endBlock()
-                self.add_compute_global_by_name("k", "({0}/({1} - {2}))", ["k0", "Vmax", "Vmin"],
+                self.add_compute_global_by_name("k", "select({1} - {2}, {0}/({1} - {2}), 0)", ["k0", "Vmax", "Vmin"],
                                                 ComputeType.GROUP, group_id)
 
         return
@@ -699,7 +698,7 @@ class GroupBoostIntegrator(GamdLangevinIntegrator, ABC):
             self, compute_type):
 
         self.calculate_common_threshold_energy_and_effective_harmonic_constant(compute_type)
-        self.add_compute_global_by_name("k", "({0}/({1} - {2}))", ["k0", "Vmax", "Vmin"],
+        self.add_compute_global_by_name("k", "select({1} - {2}, {0}/({1} - {2}), 0)", ["k0", "Vmax", "Vmin"],
                                         compute_type)
 
         return
