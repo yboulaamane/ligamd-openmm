@@ -25,44 +25,34 @@ def load_pdb_positions_and_box_vectors(pdb_coords_filename, need_box):
 
 def separate_ligand_interactions(system, topology, timask1):
     """
-    Separates the nonbonded interactions of the ligand (defined by timask1) 
-    into a separate Force Group (Group 1) using a CustomNonbondedForce.
-    The original NonbondedForce excludes these interactions.
+    Expose the ligand's nonbonded interaction energy E_L (ligand atoms with
+    every atom, defined by timask1) as Force Group 1 so it can be boosted.
+
+    The main NonbondedForce is left untouched, so the unboosted potential is
+    exactly the original one (including PME reciprocal space). E_L is added in
+    group 1 and the same term with opposite sign is added in group 0, which
+    the integrator never boosts; the two cancel in the total energy.
     """
     print(f"LiGaMD: Isolating ligand atoms using mask: {timask1}")
-    
-    # 1. Identify Ligand Atom Indices
+
     md_top = mdtraj.Topology.from_openmm(topology)
     ligand_indices = md_top.select(timask1)
-    ligand_set = set(ligand_indices)
-    all_indices = set(range(system.getNumParticles()))
-    
     if len(ligand_indices) == 0:
         raise ValueError(f"LiGaMD Error: No atoms found for mask '{timask1}'")
+    ligand_set = set(int(i) for i in ligand_indices)
+    all_indices = set(range(system.getNumParticles()))
 
-    # 2. Find the existing NonbondedForce
     nb_force = None
-    for idx, force in enumerate(system.getForces()):
+    for force in system.getForces():
         if isinstance(force, openmm.NonbondedForce):
             nb_force = force
             break
-            
     if nb_force is None:
         raise Exception("LiGaMD Error: System does not have a NonbondedForce.")
 
-    # 3. Create CustomNonbondedForce with Lorentz-Berthelot mixing rules
-    #
-    # IMPORTANT: CustomNonbondedForce cannot do PME (no reciprocal-space term),
-    # and the ligand's charges are zeroed in the main NonbondedForce below, so
-    # this expression IS the ligand's electrostatics during the simulation --
-    # not a diagnostic. A plain 1/r Coulomb sum here puts the solvated
-    # benzamidine/trypsin system 63.78 kcal/mol away from the same system under
-    # full PME, with the whole error carried by 18 ligand atoms.
-    #
-    # Using the Ewald real-space term erfc(alpha*r)/r, with the alpha the main
-    # PME force is using, reproduces PME's direct-space contribution exactly and
-    # reduces that deviation to 6.68 kcal/mol. The reciprocal-space part is
-    # still absent; closing it would need a second full PME evaluation.
+    # E_L uses the direct-space Coulomb kernel of the main force's method, so the
+    # boosted energy tracks what NonbondedForce computes. A CustomNonbondedForce
+    # cannot do reciprocal space; that part stays in the main force, unboosted.
     method = nb_force.getNonbondedMethod()
     if method in (openmm.NonbondedForce.PME, openmm.NonbondedForce.Ewald, openmm.NonbondedForce.LJPME):
         alpha, _, _, _ = nb_force.getPMEParameters()
@@ -82,67 +72,44 @@ def separate_ligand_interactions(system, topology, timask1):
     else:
         coulomb = "1/r"
 
-    energy_expression = f"""
-        4*epsilon*((sigma/r)^12-(sigma/r)^6) + 138.935456*charge1*charge2*{coulomb};
-        sigma=0.5*(sigma1+sigma2);
-        epsilon=sqrt(epsilon1*epsilon2);
-    """
-    
-    custom_force = openmm.CustomNonbondedForce(energy_expression)
-    custom_force.addPerParticleParameter("charge")
-    custom_force.addPerParticleParameter("sigma")
-    custom_force.addPerParticleParameter("epsilon")
-    
-    # 3b. Copy Parameters
-    for i in range(system.getNumParticles()):
-        charge, sigma, epsilon = nb_force.getParticleParameters(i)
-        custom_force.addParticle([charge, sigma, epsilon])
-
-    # 3c. CRITICAL FIX: Copy Exclusions from Original Force
-    # OpenMM requires exclusion lists to match. We iterate through all exceptions
-    # in the original force and add them as exclusions in the CustomForce.
-    # Note: This means 1-4 interactions (scaled) will be EXCLUDED from the CustomForce.
-    # They will still be calculated by the original NonbondedForce (unboosted), 
-    # which is the correct behavior since we only zero out the *particle* parameters below,
-    # not the *exception* parameters.
-    for i in range(nb_force.getNumExceptions()):
-        p1, p2, chargeProd, sigma, epsilon = nb_force.getExceptionParameters(i)
-        custom_force.addExclusion(p1, p2)
-
-    # 4. Configure CustomForce to ONLY compute Ligand-InteractionGroup
-    custom_force.addInteractionGroup(ligand_set, all_indices) 
-    
-    # Set cutoff/method to match original
-    method = nb_force.getNonbondedMethod()
-    cutoff = nb_force.getCutoffDistance()
-    use_switch = nb_force.getUseSwitchingFunction()
-    switch_dist = nb_force.getSwitchingDistance()
-    
-    # Map method to CustomNonbondedForce
-    if method in [openmm.NonbondedForce.PME, openmm.NonbondedForce.Ewald, openmm.NonbondedForce.CutoffPeriodic]:
-        custom_force.setNonbondedMethod(openmm.CustomNonbondedForce.CutoffPeriodic)
+    if method in (openmm.NonbondedForce.PME, openmm.NonbondedForce.Ewald,
+                  openmm.NonbondedForce.LJPME, openmm.NonbondedForce.CutoffPeriodic):
+        custom_method = openmm.CustomNonbondedForce.CutoffPeriodic
     elif method == openmm.NonbondedForce.NoCutoff:
-        custom_force.setNonbondedMethod(openmm.CustomNonbondedForce.NoCutoff)
+        custom_method = openmm.CustomNonbondedForce.NoCutoff
     else:
-        custom_force.setNonbondedMethod(openmm.CustomNonbondedForce.CutoffNonPeriodic)
-        
-    custom_force.setCutoffDistance(cutoff)
-    if use_switch:
-        custom_force.setUseSwitchingFunction(True)
-        custom_force.setSwitchingDistance(switch_dist)
+        custom_method = openmm.CustomNonbondedForce.CutoffNonPeriodic
 
-    # ASSIGN CUSTOM FORCE TO GROUP 1
-    custom_force.setForceGroup(1)
-    system.addForce(custom_force)
+    particle_params = [nb_force.getParticleParameters(i) for i in range(system.getNumParticles())]
+    # 1-2/1-3/1-4 pairs are excluded here and stay in the main force's exceptions.
+    exclusions = [nb_force.getExceptionParameters(i)[:2] for i in range(nb_force.getNumExceptions())]
 
-    # 5. Turn OFF Ligand interactions in the main NonbondedForce
-    # We zero out the ligand parameters in the MAIN force so they don't count twice.
-    # IMPORTANT: This zeros the particle parameters but NOT the exception (1-4) parameters.
-    # So 1-4 interactions are preserved in the main force.
-    for idx in ligand_indices:
-        nb_force.setParticleParameters(idx, 0.0*unit.elementary_charge, 1.0*unit.nanometer, 0.0*unit.kilojoule_per_mole)
-        
-    print(f"LiGaMD: Successfully moved {len(ligand_indices)} ligand atoms to Force Group 1 with matching exclusions.")
+    def make_ligand_force(sign, group):
+        force = openmm.CustomNonbondedForce(f"""
+            {sign}*(4*epsilon*((sigma/r)^12-(sigma/r)^6) + 138.935456*charge1*charge2*{coulomb});
+            sigma=0.5*(sigma1+sigma2);
+            epsilon=sqrt(epsilon1*epsilon2);
+        """)
+        force.addPerParticleParameter("charge")
+        force.addPerParticleParameter("sigma")
+        force.addPerParticleParameter("epsilon")
+        for charge, sigma, epsilon in particle_params:
+            force.addParticle([charge, sigma, epsilon])
+        for p1, p2 in exclusions:
+            force.addExclusion(p1, p2)
+        force.addInteractionGroup(ligand_set, all_indices)
+        force.setNonbondedMethod(custom_method)
+        force.setCutoffDistance(nb_force.getCutoffDistance())
+        if nb_force.getUseSwitchingFunction():
+            force.setUseSwitchingFunction(True)
+            force.setSwitchingDistance(nb_force.getSwitchingDistance())
+        force.setForceGroup(group)
+        system.addForce(force)
+
+    make_ligand_force(1, group=1)
+    make_ligand_force(-1, group=0)
+
+    print(f"LiGaMD: Exposed nonbonded energy of {len(ligand_indices)} ligand atoms as Force Group 1.")
     return system
 
 
