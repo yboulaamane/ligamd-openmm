@@ -7,6 +7,7 @@ import openmm.unit as unit
 from openmm import XmlSerializer
 from openmm.app import PDBFile
 import copy
+import math
 
 from gamd import parser
 from gamd.integrator_factory import *
@@ -62,18 +63,27 @@ def separate_ligand_interactions(system, topology, timask1):
     # PME force is using, reproduces PME's direct-space contribution exactly and
     # reduces that deviation to 6.68 kcal/mol. The reciprocal-space part is
     # still absent; closing it would need a second full PME evaluation.
-    pme_alpha, _, _, _ = nb_force.getPMEParameters()
-    alpha_value = pme_alpha.value_in_unit(unit.nanometer**-1)
-    if alpha_value == 0.0:
-        # PME alpha left at "auto" (0): derive it the same way OpenMM does,
-        # from the Ewald error tolerance and cutoff distance.
-        import math
-        tol = nb_force.getEwaldErrorTolerance()
-        cutoff_nm = nb_force.getCutoffDistance().value_in_unit(unit.nanometer)
-        alpha_value = math.sqrt(-math.log(2.0 * tol)) / cutoff_nm
+    method = nb_force.getNonbondedMethod()
+    if method in (openmm.NonbondedForce.PME, openmm.NonbondedForce.Ewald, openmm.NonbondedForce.LJPME):
+        alpha, _, _, _ = nb_force.getPMEParameters()
+        alpha = alpha.value_in_unit(unit.nanometer**-1)
+        if alpha == 0.0:
+            # alpha left at "auto": derive it the same way OpenMM does
+            tol = nb_force.getEwaldErrorTolerance()
+            alpha = math.sqrt(-math.log(2.0 * tol)) / nb_force.getCutoffDistance().value_in_unit(unit.nanometer)
+        coulomb = f"erfc({alpha}*r)/r"
+    elif method in (openmm.NonbondedForce.CutoffPeriodic, openmm.NonbondedForce.CutoffNonPeriodic):
+        # reaction field, matching what NonbondedForce uses for these methods
+        rc = nb_force.getCutoffDistance().value_in_unit(unit.nanometer)
+        eps = nb_force.getReactionFieldDielectric()
+        krf = (eps - 1) / ((2 * eps + 1) * rc**3)
+        crf = 3 * eps / ((2 * eps + 1) * rc)
+        coulomb = f"(1/r + {krf}*r^2 - {crf})"
+    else:
+        coulomb = "1/r"
 
     energy_expression = f"""
-        4*epsilon*((sigma/r)^12-(sigma/r)^6) + 138.935456*charge1*charge2*erfc({alpha_value}*r)/r;
+        4*epsilon*((sigma/r)^12-(sigma/r)^6) + 138.935456*charge1*charge2*{coulomb};
         sigma=0.5*(sigma1+sigma2);
         epsilon=sqrt(epsilon1*epsilon2);
     """
