@@ -1,0 +1,10 @@
+method,threshold_A,replicas_crossing,total_replicas,mean_occupancy_percent
+Unbiased MD,6,0,6,0.0
+Unbiased MD,8,0,6,0.0
+Unbiased MD,10,0,6,0.0
+Protein-GaMD,6,1,6,4.4
+Protein-GaMD,8,1,6,4.0
+Protein-GaMD,10,1,6,3.4
+LiGaMD dual boost,6,6,6,14.3
+LiGaMD dual boost,8,6,6,12.4
+LiGaMD dual boost,10,6,6,10.4

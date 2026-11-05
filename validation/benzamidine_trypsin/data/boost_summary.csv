@@ -1,0 +1,13 @@
+method,replica,mean_kcal_per_mol,q05_kcal_per_mol,q95_kcal_per_mol
+Protein-GaMD,1,55.62,45.07,66.67
+Protein-GaMD,2,54.58,44.08,65.50
+Protein-GaMD,3,55.93,45.31,67.24
+Protein-GaMD,4,55.39,45.31,66.11
+Protein-GaMD,5,59.44,46.85,71.81
+Protein-GaMD,6,52.83,42.83,63.04
+LiGaMD dual boost,1,60.26,49.69,71.41
+LiGaMD dual boost,2,55.38,44.91,66.42
+LiGaMD dual boost,3,56.38,46.14,67.41
+LiGaMD dual boost,4,55.84,46.33,67.22
+LiGaMD dual boost,5,54.10,42.69,62.90
+LiGaMD dual boost,6,53.57,45.08,65.24

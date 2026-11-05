@@ -29,6 +29,14 @@ With the addition of **LiGaMD**, this module allows researchers to:
 - Open binding pockets without risking solvent instability
 - Enhance sampling of ligand binding and unbinding events
 
+### Validation benchmark
+
+The benzamidine–trypsin benchmark compares six replicas each of unbiased MD, protein-GaMD, and LiGaMD dual boost. The strict ligand–protein separation threshold is reached in **0/6**, **1/6**, and **6/6** replicas, respectively, and the ranking is unchanged across 6, 8, and 10 Å cutoffs.
+
+![Benzamidine–trypsin benchmark](validation/benzamidine_trypsin/figures/benchmark_summary.png)
+
+See the [complete benchmark, processed data, interpretation limits, and reproducible plotting script](validation/benzamidine_trypsin/README.md). This validates enhanced egress sampling; it does not by itself establish physical residence times or converged binding thermodynamics.
+
 ---
 
 ## Installation
