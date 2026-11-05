@@ -1,0 +1,46 @@
+cff-version: 1.2.0
+title: LiGaMD-OpenMM
+message: >-
+  If you use this software, please cite both this record and the
+  gamd-openmm package it is derived from.
+type: software
+authors:
+  - given-names: Yassir
+    family-names: Boulaamane
+repository-code: 'https://github.com/yboulaamane/ligamd-openmm'
+abstract: >-
+  An open-source implementation of ligand Gaussian accelerated molecular
+  dynamics (LiGaMD) for OpenMM, adding a ligand-selective non-bonded boost to
+  the gamd-openmm package. The ligand's non-bonded interactions are isolated
+  into their own force group, with electrostatics evaluated using the Ewald
+  real-space term at the system's PME separation parameter.
+license: MIT
+version: 0.1.0
+date-released: '2026-09-01'
+keywords:
+  - molecular dynamics
+  - enhanced sampling
+  - GaMD
+  - LiGaMD
+  - OpenMM
+  - ligand binding
+references:
+  - type: software
+    title: gamd-openmm
+    notes: upstream package this work forks
+    repository-code: 'https://github.com/MiaoLab20/gamd-openmm'
+  - type: article
+    title: >-
+      Ligand Gaussian Accelerated Molecular Dynamics (LiGaMD):
+      Characterization of Ligand Binding Thermodynamics and Kinetics
+    authors:
+      - family-names: Miao
+        given-names: Yinglong
+      - family-names: Bhattarai
+        given-names: Apurba
+      - family-names: Wang
+        given-names: Jinan
+    journal: Journal of Chemical Theory and Computation
+    year: 2020
+    volume: '16'
+    start: '5526'
