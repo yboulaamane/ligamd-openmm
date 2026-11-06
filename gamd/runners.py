@@ -248,15 +248,17 @@ class Runner:
             # Opt-in solute-only trajectory to shrink DCD size losslessly for
             # analysis (water carries no ligand-egress information). Enabled
             # via env var so default behavior is unchanged for other runs.
-            reporter_kwargs = {"append": traj_append}
+            interval = self.config.outputs.reporting.coordinates_interval
             if os.environ.get("GAMD_SOLUTE_ONLY"):
                 water_names = {"WAT", "HOH", "H2O", "T3P", "T4P", "SOL", "TIP3"}
-                reporter_kwargs["atomSubset"] = [
+                solute_atoms = [
                     atom.index for atom in simulation.topology.atoms()
                     if atom.residue.name not in water_names]
-            simulation.reporters.append(traj_reporter(
-                traj_name, self.config.outputs.reporting.coordinates_interval,
-                **reporter_kwargs))
+                simulation.reporters.append(utils.SubsetDCDReporter(
+                    traj_name, interval, solute_atoms, append=traj_append))
+            else:
+                simulation.reporters.append(traj_reporter(
+                    traj_name, interval, append=traj_append))
         elif traj_reporter == openmm_app.PDBReporter:
             simulation.reporters.append(traj_reporter(
                 traj_name, self.config.outputs.reporting.coordinates_interval))
