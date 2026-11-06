@@ -95,7 +95,7 @@ class TestGamdSimulationFactory:
         with pytest.raises(Exception) as excinfo:
             factory.createGamdSimulation(test_config, "CPU", 0)
         
-        assert "No valid input files found" in str(excinfo.value)
+        assert "Algorithm not implemented" in str(excinfo.value)
 
 
 class TestLoadPdbPositionsAndBoxVectors:

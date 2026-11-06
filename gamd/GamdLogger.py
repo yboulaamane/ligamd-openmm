@@ -155,4 +155,7 @@ class GamdLogger:
                            second_boost_potential + "\t" +
                            first_effective_harmonic_constant + "\t" +
                            second_effective_harmonic_constant + "\n")
+        # Reweighting needs every line, and a job killed at its time limit would
+        # otherwise lose whatever is still in the write buffer.
+        self.gamdLog.flush()
 
