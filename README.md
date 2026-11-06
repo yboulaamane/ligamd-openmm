@@ -41,52 +41,30 @@ See the [complete benchmark, processed data, interpretation limits, and reproduc
 
 ## Installation
 
-### 1. Install Anaconda (Python 3.x)
-
-Download and install Anaconda (Python 3.x).
-
-### 2. Install OpenMM
-
-Follow instructions in the **OpenMM User Guide – Section 2.2 Installing OpenMM**.
-
-### 3. Install AmberTools (for post-MD analysis)
-
-```bash
-conda install -c conda-forge ambertools
-```
-
-### 4. Install PyReweighting
-
-Clone the PyReweighting repository:
-
-```bash
-git clone https://github.com/MiaoLab20/PyReweighting.git
-```
-
-> **Note:**  
-> If developing the GaMD module and using test scripts, ensure the PyReweighting directory is added to your `PATH`.
-
-### 5. Clone and Install LiGaMD-OpenMM
+You need Linux, [conda](https://conda-forge.org/download/), and an NVIDIA GPU with driver 525 or newer (check with `nvidia-smi`).
 
 ```bash
 git clone https://github.com/yboulaamane/ligamd-openmm.git
 cd ligamd-openmm
-pip install -e .
+conda env create -f environment.yml
+conda activate ligamd
+pip install -e . --no-deps
 ```
 
-You can either:
+This installs OpenMM, the package and the `gamdRunner` command. A login node with no GPU can do the install. Keep `--no-deps`, because without it pip replaces conda's NumPy and OpenMM stops importing. Run `conda activate ligamd` in every new shell and job script.
 
-- Copy `gamdRunner` into your user `bin` directory, or  
-- Add the `ligamd-openmm` directory to your `PATH`
-
----
-
-## Testing (Optional)
-
-To run tests:
+**Check the install:**
 
 ```bash
-pytest gamd/tests
+pytest gamd/tests                 # anywhere
+python -m openmm.testInstallation # on a GPU machine; CUDA must be listed
+```
+
+**For analysis (optional):**
+
+```bash
+conda install -n ligamd -c conda-forge ambertools
+git clone https://github.com/MiaoLab20/PyReweighting.git
 ```
 
 ---
@@ -96,6 +74,20 @@ pytest gamd/tests
 Run GaMD/LiGaMD using your configuration file:
 
 ```bash
+gamdRunner xml configuration-file.xml
+```
+
+On a SLURM cluster, put that in a job script. Partition and QoS names differ between clusters:
+
+```bash
+#!/bin/bash
+#SBATCH --partition=YOUR_GPU_PARTITION
+#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=2
+#SBATCH --time=24:00:00
+
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate ligamd
 gamdRunner xml configuration-file.xml
 ```
 

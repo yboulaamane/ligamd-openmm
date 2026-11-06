@@ -1,0 +1,21 @@
+# Create with: conda env create -f environment.yml
+# Then install this package with: pip install -e . --no-deps
+# Keep --no-deps: without it, pip replaces conda's NumPy and OpenMM stops importing.
+#
+# OpenMM's CUDA build sets the oldest NVIDIA driver it can run on. CUDA 12.0
+# needs driver 525 or newer and also runs on newer drivers, so this pin works on
+# the widest range of machines. OpenMM 8.4 and later need much newer drivers.
+name: ligamd
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.11
+  - openmm=8.2.0
+  - cuda-version=12.0
+  - parmed
+  - mdtraj
+  - numpy<2  # this OpenMM build was compiled against NumPy 1.x
+  - matplotlib
+  - pytest
+  - pip
