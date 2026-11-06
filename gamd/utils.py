@@ -6,6 +6,8 @@ Authors: Matthew Copeland
 
 """
 
+from openmm.app import DCDReporter, Topology
+from openmm.app.dcdfile import DCDFile
 from openmm.app.statedatareporter import StateDataReporter
 import openmm.unit as unit
 from .stage_integrator import BoostType
@@ -21,6 +23,37 @@ def create_gamd_log(gamdLog, filename):
             for header in keys[:-1]:
                 f.write(str(entry[header]) + ", ")
             f.write(str(entry[keys[-1]]) + "\n")
+
+
+class SubsetDCDReporter(DCDReporter):
+    """A DCDReporter that writes only the given atoms.
+
+    OpenMM's own atomSubset option does not exist in the OpenMM version pinned
+    in environment.yml, so this does the same job on any version.
+    """
+
+    def __init__(self, file, reportInterval, atomSubset, append=False):
+        super().__init__(file, reportInterval, append=append)
+        self._subset = list(atomSubset)
+
+    def _subset_topology(self, topology):
+        # DCDFile only uses the atom count and the periodic box.
+        subset = Topology()
+        subset.setPeriodicBoxVectors(topology.getPeriodicBoxVectors())
+        residue = subset.addResidue("SUB", subset.addChain())
+        for _ in self._subset:
+            subset.addAtom("X", None, residue)
+        return subset
+
+    def report(self, simulation, state):
+        if self._dcd is None:
+            self._dcd = DCDFile(
+                self._out, self._subset_topology(simulation.topology),
+                simulation.integrator.getStepSize(), simulation.currentStep,
+                self._reportInterval, self._append)
+        positions = state.getPositions(asNumpy=True)[self._subset]
+        self._dcd.writeModel(
+            positions, periodicBoxVectors=state.getPeriodicBoxVectors())
 
 
 class ExpandedStateDataReporter(StateDataReporter):
